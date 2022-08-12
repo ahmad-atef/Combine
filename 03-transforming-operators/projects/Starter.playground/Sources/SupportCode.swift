@@ -51,6 +51,34 @@ public struct Coordinate {
     }
 }
 
+
+public struct Tripple {
+    public enum Sex {
+        case male, female
+    }
+    
+    public let age: Int
+    public let name: String
+    public let sex: Sex
+    
+    public init(age: Int, name: String, sex: Sex) {
+        self.age = age
+        self.name = name
+        self.sex = sex
+    }
+    
+}
+
+public func whatIsYourAge(name:String, age: Int, sex: Tripple.Sex) -> String {
+    if case .male = sex {
+        let ageFormatter = NumberFormatter()
+        ageFormatter.locale = .init(identifier: "ar")
+        return ageFormatter.string(from: .init(value: age)) ?? ""
+    } else {
+        return "Non of your business! 💁‍♀️"
+    }
+}
+
 public func quadrantOf(x: Int, y: Int) -> String {
     var quadrant = ""
     

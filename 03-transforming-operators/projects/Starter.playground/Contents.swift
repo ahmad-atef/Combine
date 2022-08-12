@@ -39,3 +39,33 @@ example(of: "map") {
     // - The NumberFormatter can take different local / language and how the formatter got string from NSNumber Integer
     // - How the ouptut become non-optional when adding the default value ?? ""
 }
+
+example(of: "Map key path") {
+    let publisher = PassthroughSubject<Coordinate, Never>()
+    
+    publisher
+        .map(\.x, \.y)
+        .sink(receiveCompletion: { print($0) },
+              receiveValue: { x, y in
+            print(quadrantOf(x: x, y: y))
+        })
+        .store(in: &subscriptions)
+    
+    publisher.send(.init(x: 2, y: 2))
+    publisher.send(.init(x: 2, y: -2))
+    publisher.send(.init(x: -2, y: 2))
+    publisher.send(.init(x: -2, y: -2))
+ 
+    let triplePublisher = PassthroughSubject<Tripple, Never>()
+    
+    triplePublisher
+        .map(\.age, \.sex, \.name)
+        .sink(receiveCompletion: { print($0) },
+              receiveValue: { age, sex, name in
+            print(whatIsYourAge(name: name, age: age, sex: sex))
+        })
+    
+    triplePublisher.send(.init(age: 31, name: "Ahmed", sex: .male))
+    triplePublisher.send(.init(age: 30, name: "Rana", sex: .female))
+    
+}
