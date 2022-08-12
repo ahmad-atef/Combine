@@ -64,8 +64,24 @@ example(of: "Map key path") {
               receiveValue: { age, sex, name in
             print(whatIsYourAge(name: name, age: age, sex: sex))
         })
+        .store(in: &subscriptions)
     
     triplePublisher.send(.init(age: 31, name: "Ahmed", sex: .male))
     triplePublisher.send(.init(age: 30, name: "Rana", sex: .female))
     
+}
+example(of: "Try Map",
+        comment:"""
+Notice in the `tryMap` operator
+1. You have to use the try inside the tryMap operator.
+2. The failure comes in thee completion branch.
+3. You can build another example, something that can fail, and on fail you will see the failure when using tryMap
+""") {
+    Just("Directory that doesn't exist")
+        .tryMap{ try
+            FileManager.default.contentsOfDirectory(atPath: $0)
+        }
+        .sink(receiveCompletion: { print($0) },
+              receiveValue: { print($0)} )
+        .store(in: &subscriptions)
 }
