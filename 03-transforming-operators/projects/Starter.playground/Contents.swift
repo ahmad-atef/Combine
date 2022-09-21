@@ -87,7 +87,14 @@ Notice in the `tryMap` operator
 }
 
 
-example(of: "FlatMap") {
+example(
+    of: "FlatMap",
+    comment: """
+FlatMap operator flatten multiple upstream publishers into single downstream publisher that you can subscribe to it.
+So you can have a publisher that emits a value and you want to flatMap the publisher it self into something else, i.e into another publisher.
+So imagine you have a publisher of <String, Never> and you want to flatMap into <Int, Never>
+or even <String, Never> => <String, Never> but doing different logic like the following example.
+""") {
     func decode(_ codes: [Int]) -> AnyPublisher<String, Never> {
         Just(
             codes
@@ -96,7 +103,8 @@ example(of: "FlatMap") {
                     return String(UnicodeScalar(code) ?? " ")
                 }
                 .joined()
-        ).eraseToAnyPublisher()
+        )
+        .eraseToAnyPublisher()
     }
     
     [128144, 32, 72, 101, 108, 108, 111, 44, 32, 87, 111, 114, 108, 100, 33, 32, 128144]
@@ -105,5 +113,86 @@ example(of: "FlatMap") {
         .flatMap(decode)
         .sink(receiveCompletion: { print($0)},
               receiveValue: { print($0)})
+        .store(in: &subscriptions)
+}
+
+example(
+    of: "Flat map 2",
+    comment:"""
+With FlatMap Operator you can chain the upstream operators one after another, and return one publisher which will publish to the down stream.
+Each upstream publisher input should be the output from the pervious publisher.
+""") {
+    
+    func oddOrEven(_ numbers: [Int]) -> AnyPublisher<[Bool], Never> {
+        Just (
+            numbers.compactMap { $0.isMultiple(of:2) }
+        ).eraseToAnyPublisher()
+    }
+    
+    func formatNumbers(_ numbers: [Bool]) -> AnyPublisher<String, Never> {
+        Just (
+            numbers
+                .map { return $0 == true ? "Even" : "Odd" }
+                .joined(separator: ", ")
+        ).eraseToAnyPublisher()
+    }
+    
+    func upperCase(_ string: String) -> AnyPublisher<String, Never> {
+        Just(
+            string.uppercased()
+        ).eraseToAnyPublisher()
+    }
+    
+    [1, 3, 18, 19, 500]
+        .publisher
+        .collect()
+        .flatMap(oddOrEven)
+        .flatMap(formatNumbers)
+        .flatMap(upperCase)
+        .sink(receiveValue: { print($0) } )
+        .store(in: &subscriptions)
+}
+
+example(of: "replaceNil") {
+    ["A", nil, "B"]
+        .publisher
+        .eraseToAnyPublisher()
+        .replaceNil(with: "-")
+        .sink(receiveValue: { print($0) } )
+        .store(in: &subscriptions)
+}
+
+example(of: "Empty Publisher",
+        comment: """
+There is new publisher type called Empty which is empty 🤷‍♂️, i.e Publisher that won't send anything
+"""
+) {
+    let empty = Empty<Int, Never>()
+    empty
+        .sink(receiveCompletion: { print($0) },
+              receiveValue: { $0 } )
+        .store(in: &subscriptions)
+}
+
+example(of: "Replace Empty") {
+    let empty = Empty<Int, Never>()
+    empty
+        .replaceEmpty(with: 5)
+        .sink(receiveCompletion: { print($0) },
+              receiveValue: { print($0) } )
+        .store(in: &subscriptions)
+    
+}
+
+example(of: "Scan") {
+    var randomGenerator: Int { Int.random(in: -10...10) }
+    func random(_ number: Int) -> Int { randomGenerator }
+    let workingDaysValues = (0...25).map(random)
+    workingDaysValues
+        .publisher
+        .scan(50) { current, latest in
+            max(0, current + latest)
+        }
+        .sink { _ in }
         .store(in: &subscriptions)
 }
