@@ -61,3 +61,37 @@ example(of: "ignoreOutput") {
               receiveValue: { print($0) })
         .store(in: &subscriptions)
 }
+
+example(of: "first(where)") {
+    let numbers = (1...9).publisher
+    numbers
+        .print("numbers")
+        .first(where: { $0.isMultiple(of: 2) } )
+        .sink(receiveValue: { print($0) })
+        .store(in: &subscriptions)
+}
+example(of: "last(where)") {
+    let numbers = (1...9).publisher
+    numbers
+        .print("📡")
+        .last(where: { $0.isMultiple(of: 2)})
+        .sink(receiveValue: { print($0) })
+        .store(in: &subscriptions)
+}
+
+example(of: "last(where)",
+        detailedDescription: "the last(where) operator will not work, until the publisher complete the work") {
+    let subject = PassthroughSubject<Int, Never>()
+    
+    subject
+        .print()
+        .first(where: { $0.isMultiple(of: 2)})
+        .last(where: { $0.isMultiple(of: 3) })
+        .sink(receiveValue: { print($0) })
+        .store(in: &subscriptions)
+    
+    subject.send(2)
+    subject.send(3)
+    
+    subject.send(completion: .finished)
+}

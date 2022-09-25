@@ -29,7 +29,9 @@
 import Foundation
 
 public func example(of description: String,
+                    detailedDescription: String? = nil,
                     action: () -> Void) {
   print("\n——— Example of:", description, "———")
+    if let detailedDescription = detailedDescription { print(detailedDescription, "———") }
   action()
 }
