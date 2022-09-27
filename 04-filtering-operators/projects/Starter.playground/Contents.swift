@@ -95,3 +95,96 @@ example(of: "last(where)",
     
     subject.send(completion: .finished)
 }
+
+example(of: "dropFirst") {
+    let numbers = (1...10).publisher
+    
+    numbers
+        .dropFirst(8)
+        .sink(receiveValue: { print($0) })
+        .store(in: &subscriptions)
+}
+
+example(of: "dropWhile",
+        detailedDescription: """
+dropWhile keeps dropping as the condition is true, the moment the condition becomes false then the publisher stops dropping and send through all the values...
+"""
+) {
+    let numbers = (1...10).publisher
+    
+    numbers
+        .drop(while: { $0 % 5 != 0 } )
+        .sink(receiveValue: { print($0) })
+        .store(in: &subscriptions)
+}
+
+example(of: "dropUntilOutputFrom") {
+    let isReady = PassthroughSubject<Void, Never>()
+    let taps = PassthroughSubject<Int, Never>()
+    
+    taps
+        .drop(untilOutputFrom: isReady)
+        .sink(receiveValue: { print($0)})
+        .store(in: &subscriptions)
+    
+    taps.send(1)
+    taps.send(3)
+    taps.send(4)
+    
+    isReady.send()
+    taps.send(10)
+    taps.send(11)
+}
+
+example(of: "Prefix()") {
+    let numbers = (1...10).publisher
+    
+    numbers
+        .prefix(2)
+        .sink(receiveCompletion: { print($0) },
+              receiveValue: { print($0)})
+        .store(in: &subscriptions)
+}
+
+example(of: "Prefix(while)",
+        detailedDescription:
+"""
+prefix(while) start prefixing as long the condition is valid, the moment the condition becomes false, the prefixing operation
+stops and the publisher completes
+"""
+) {
+    let numbers = (1...10).publisher
+    
+    numbers
+        .prefix(while: { $0 < 5 })
+        .sink(receiveValue: { print($0)})
+        .store(in: &subscriptions)
+}
+
+example(of: "prefixUntilOutputFrom") {
+    let numbers = PassthroughSubject<Int, Never>()
+    let isReady = PassthroughSubject<Void, Never>()
+    
+    numbers
+        .prefix(untilOutputFrom: isReady)
+        .sink(receiveValue: { print($0) })
+        .store(in: &subscriptions)
+    
+    numbers.send(1)
+    numbers.send(2)
+    numbers.send(3)
+    
+    isReady.send()
+    numbers.send(4)
+}
+
+example(of: "challenge") {
+    let numbers = (1...100).publisher
+    
+    numbers
+        .dropFirst(50)
+        .prefix(20)
+        .filter { $0 % 2 == 0 }
+        .sink(receiveValue: { print($0) })
+        .store(in: &subscriptions)
+}
