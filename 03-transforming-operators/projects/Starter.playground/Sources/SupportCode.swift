@@ -34,36 +34,66 @@ import Foundation
 import Combine
 
 public func example(of description: String,
+                    comment: String = "",
                     action: () -> Void) {
-  print("\n——— Example of:", description, "———")
-  action()
+    print("\n——— Example of:", description, "———")
+    print("\t", description, comment)
+    action()
 }
 
 public struct Coordinate {
-  public let x: Int
-  public let y: Int
-  
-  public init(x: Int, y: Int) {
-    self.x = x
-    self.y = y
-  }
+    public let x: Int
+    public let y: Int
+    
+    public init(x: Int, y: Int) {
+        self.x = x
+        self.y = y
+    }
+}
+
+
+public struct Tripple {
+    public enum Sex {
+        case male, female
+    }
+    
+    public let age: Int
+    public let name: String
+    public let sex: Sex
+    
+    public init(age: Int, name: String, sex: Sex) {
+        self.age = age
+        self.name = name
+        self.sex = sex
+    }
+    
+}
+
+public func whatIsYourAge(name:String, age: Int, sex: Tripple.Sex) -> String {
+    if case .male = sex {
+        let ageFormatter = NumberFormatter()
+        ageFormatter.locale = .init(identifier: "ar")
+        return ageFormatter.string(from: .init(value: age)) ?? ""
+    } else {
+        return "Non of your business! 💁‍♀️"
+    }
 }
 
 public func quadrantOf(x: Int, y: Int) -> String {
-  var quadrant = ""
-  
-  switch (x, y) {
-  case (1..., 1...):
-    quadrant = "1"
-  case (..<0, 1...):
-    quadrant = "2"
-  case (..<0, ..<0):
-    quadrant = "3"
-  case (1..., ..<0):
-    quadrant = "4"
-  default:
-    quadrant = "boundary"
-  }
-  
-  return quadrant
+    var quadrant = ""
+    
+    switch (x, y) {
+    case (1..., 1...):
+        quadrant = "1"
+    case (..<0, 1...):
+        quadrant = "2"
+    case (..<0, ..<0):
+        quadrant = "3"
+    case (1..., ..<0):
+        quadrant = "4"
+    default:
+        quadrant = "boundary"
+    }
+    
+    return quadrant
 }

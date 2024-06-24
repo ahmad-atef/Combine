@@ -3,36 +3,196 @@ import Combine
 
 var subscriptions = Set<AnyCancellable>()
 
-<#Add your code here#>
+// MARK: Collect
+example(of: "Collect",
+        comment: "waits till the upstream publisher completes, and then collect all published values and send it in a single array to the downstram") {
+    ["A", "B", "C", "D"].publisher
+        .collect()
+        .sink(receiveCompletion: { print($0) },
+              receiveValue: { print($0) })
+        .store(in: &subscriptions)
+}
 
-/// Copyright (c) 2021 Razeware LLC
-///
-/// Permission is hereby granted, free of charge, to any person obtaining a copy
-/// of this software and associated documentation files (the "Software"), to deal
-/// in the Software without restriction, including without limitation the rights
-/// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-/// copies of the Software, and to permit persons to whom the Software is
-/// furnished to do so, subject to the following conditions:
-///
-/// The above copyright notice and this permission notice shall be included in
-/// all copies or substantial portions of the Software.
-///
-/// Notwithstanding the foregoing, you may not use, copy, modify, merge, publish,
-/// distribute, sublicense, create a derivative work, and/or sell copies of the
-/// Software in any work that is designed, intended, or marketed for pedagogical or
-/// instructional purposes related to programming, coding, application development,
-/// or information technology.  Permission for such use, copying, modification,
-/// merger, publication, distribution, sublicensing, creation of derivative works,
-/// or sale is expressly withheld.
-///
-/// This project and source code may use libraries or frameworks that are
-/// released under various Open-Source licenses. Use of those libraries and
-/// frameworks are governed by their own individual licenses.
-///
-/// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-/// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-/// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-/// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-/// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-/// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-/// THE SOFTWARE.
+// MARK: Collect with Limit
+example(of: "Collect(count)",
+        comment: "collects the values with the count number you pass, meaning that this operator will wait for the upstream publisher till it finishes and then send the values into the downstream into baches of the count you specifiy") {
+    ["A", "B", "C", "D"].publisher
+        .collect(2)
+        .sink(receiveCompletion: { print($0) },
+              receiveValue: { print($0)})
+        .store(in: &subscriptions)
+}
+
+// MARK: Map
+example(of: "map") {
+    let numberFormatter = NumberFormatter()
+    numberFormatter.locale = .init(languageComponents: .init(language: .init(identifier: "ar")))
+    numberFormatter.numberStyle = .spellOut
+    
+    [123, 4, 56].publisher
+        .map { numberFormatter.string(for: NSNumber(integerLiteral: $0)) ?? "" }
+        .sink(receiveCompletion: { print($0) },
+              receiveValue: { print($0) })
+        .store(in: &subscriptions)
+    
+    // In this block, notice how:
+    // - The NumberFormatter can take different local / language and how the formatter got string from NSNumber Integer
+    // - How the ouptut become non-optional when adding the default value ?? ""
+}
+
+example(of: "Map key path") {
+    let publisher = PassthroughSubject<Coordinate, Never>()
+    
+    publisher
+        .map(\.x, \.y)
+        .sink(receiveCompletion: { print($0) },
+              receiveValue: { x, y in
+            print(quadrantOf(x: x, y: y))
+        })
+        .store(in: &subscriptions)
+    
+    publisher.send(.init(x: 2, y: 2))
+    publisher.send(.init(x: 2, y: -2))
+    publisher.send(.init(x: -2, y: 2))
+    publisher.send(.init(x: -2, y: -2))
+ 
+    let triplePublisher = PassthroughSubject<Tripple, Never>()
+    
+    triplePublisher
+        .map(\.age, \.sex, \.name)
+        .sink(receiveCompletion: { print($0) },
+              receiveValue: { age, sex, name in
+            print(whatIsYourAge(name: name, age: age, sex: sex))
+        })
+        .store(in: &subscriptions)
+    
+    triplePublisher.send(.init(age: 31, name: "Ahmed", sex: .male))
+    triplePublisher.send(.init(age: 30, name: "Rana", sex: .female))
+    
+}
+example(of: "Try Map",
+        comment:"""
+Notice in the `tryMap` operator
+1. You have to use the try inside the tryMap operator.
+2. The failure comes in thee completion branch.
+3. You can build another example, something that can fail, and on fail you will see the failure when using tryMap
+""") {
+    Just("Directory that doesn't exist")
+        .tryMap{ try
+            FileManager.default.contentsOfDirectory(atPath: $0)
+        }
+        .sink(receiveCompletion: { print($0) },
+              receiveValue: { print($0)} )
+        .store(in: &subscriptions)
+}
+
+
+example(
+    of: "FlatMap",
+    comment: """
+FlatMap operator flatten multiple upstream publishers into single downstream publisher that you can subscribe to it.
+So you can have a publisher that emits a value and you want to flatMap the publisher it self into something else, i.e into another publisher.
+So imagine you have a publisher of <String, Never> and you want to flatMap into <Int, Never>
+or even <String, Never> => <String, Never> but doing different logic like the following example.
+""") {
+    func decode(_ codes: [Int]) -> AnyPublisher<String, Never> {
+        Just(
+            codes
+                .compactMap{ code in
+                    guard (32...128144).contains(code) else { return nil }
+                    return String(UnicodeScalar(code) ?? " ")
+                }
+                .joined()
+        )
+        .eraseToAnyPublisher()
+    }
+    
+    [128144, 32, 72, 101, 108, 108, 111, 44, 32, 87, 111, 114, 108, 100, 33, 32, 128144]
+        .publisher
+        .collect()
+        .flatMap(decode)
+        .sink(receiveCompletion: { print($0)},
+              receiveValue: { print($0)})
+        .store(in: &subscriptions)
+}
+
+example(
+    of: "Flat map 2",
+    comment:"""
+With FlatMap Operator you can chain the upstream operators one after another, and return one publisher which will publish to the down stream.
+Each upstream publisher input should be the output from the pervious publisher.
+""") {
+    
+    func oddOrEven(_ numbers: [Int]) -> AnyPublisher<[Bool], Never> {
+        Just (
+            numbers.compactMap { $0.isMultiple(of:2) }
+        ).eraseToAnyPublisher()
+    }
+    
+    func formatNumbers(_ numbers: [Bool]) -> AnyPublisher<String, Never> {
+        Just (
+            numbers
+                .map { return $0 == true ? "Even" : "Odd" }
+                .joined(separator: ", ")
+        ).eraseToAnyPublisher()
+    }
+    
+    func upperCase(_ string: String) -> AnyPublisher<String, Never> {
+        Just(
+            string.uppercased()
+        ).eraseToAnyPublisher()
+    }
+    
+    [1, 3, 18, 19, 500]
+        .publisher
+        .collect()
+        .flatMap(oddOrEven)
+        .flatMap(formatNumbers)
+        .flatMap(upperCase)
+        .sink(receiveValue: { print($0) } )
+        .store(in: &subscriptions)
+}
+
+example(of: "replaceNil") {
+    ["A", nil, "B"]
+        .publisher
+        .eraseToAnyPublisher()
+        .replaceNil(with: "-")
+        .sink(receiveValue: { print($0) } )
+        .store(in: &subscriptions)
+}
+
+example(of: "Empty Publisher",
+        comment: """
+There is new publisher type called Empty which is empty 🤷‍♂️, i.e Publisher that won't send anything
+"""
+) {
+    let empty = Empty<Int, Never>()
+    empty
+        .sink(receiveCompletion: { print($0) },
+              receiveValue: { $0 } )
+        .store(in: &subscriptions)
+}
+
+example(of: "Replace Empty") {
+    let empty = Empty<Int, Never>()
+    empty
+        .replaceEmpty(with: 5)
+        .sink(receiveCompletion: { print($0) },
+              receiveValue: { print($0) } )
+        .store(in: &subscriptions)
+    
+}
+
+example(of: "Scan") {
+    var randomGenerator: Int { Int.random(in: -10...10) }
+    func random(_ number: Int) -> Int { randomGenerator }
+    let workingDaysValues = (0...25).map(random)
+    workingDaysValues
+        .publisher
+        .scan(50) { current, latest in
+            max(0, current + latest)
+        }
+        .sink { _ in }
+        .store(in: &subscriptions)
+}
